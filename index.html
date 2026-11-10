@@ -40,17 +40,15 @@ const split=[
 {id:'hollow',name:'Hollow Body Hold',sets:2,time:true,note:'Bodyweight • 20 seconds per round'}
 ],
 [
-{id:'split-squat',name:'Split Squat',sets:4,sides:true,legacy:0},
-{id:'rev-lunge',name:'Reverse Lunge',sets:4,sides:true,legacy:1},
-{id:'db-squat',name:'Dumbbell Squat',sets:3,sides:true,legacy:2},
-{id:'kickstand',name:'Kickstand Deadlift',sets:4,sides:true,legacy:3},
-{id:'single-deadlift',name:'Single Leg Deadlift',sets:4,sides:true,legacy:4},
-{id:'rdl',name:'RDL',sets:3,sides:true,legacy:5},
-{id:'single-stretch',name:'Single Leg Stretch/Pull',sets:2,sides:true,legacy:6},
-{id:'oblique',name:'Oblique Tuck Up',sets:2,sides:true,legacy:7},
-{id:'butterfly',name:'Butterfly Sit Up',sets:2,sides:true,legacy:8},
-{id:'db-swing',name:'EMOM DB Swing',sets:5,sides:true,legacy:9},
-{id:'squat-jump',name:'Squat Jump',sets:5,sides:true,legacy:10}
+{id:'split-squat',name:'Split Squat',sets:4,legacy:0},
+{id:'rev-lunge',name:'Reverse Lunge',sets:4,legacy:1},
+{id:'db-squat',name:'Dumbbell Squat',sets:3,legacy:2},
+{id:'deadlift-combo',name:'Kickstand Deadlift → Single Leg Deadlift',sets:4,combo:['Kickstand Deadlift','Single Leg Deadlift'],note:'Paired deadlifts — record each movement per round'},
+{id:'rdl',name:'Romanian Deadlift',sets:3,legacy:5},
+{id:'single-stretch',name:'Single / Straight Leg Stretch',sets:1,time:true,seconds:60,note:'1 minute • bodyweight'},
+{id:'oblique',name:'Oblique Tuck-Up (Right / Left)',sets:1,time:true,timedSides:true,seconds:30,note:'30 seconds right + 30 seconds left • bodyweight'},
+{id:'butterfly',name:'Butterfly Sit-Up',sets:1,time:true,seconds:60,note:'1 minute • bodyweight'},
+{id:'emom',name:'EMOM — Dumbbell Swing / Jump Squat',sets:5,combo:['Dumbbell Swing','Jump Squat'],noWeight:['Jump Squat'],note:'5 minutes total • track dumbbell weight and reps for each minute'}
 ],
 [
 {id:'chest',name:'NG Chest Press',sets:4,sides:true,legacy:0},
@@ -77,7 +75,7 @@ inp.value=db[k]??old??preset??'';inp.placeholder='—';inp.oninput=()=>{db[k]=in
 function addRow(set,side,movement,weightAllowed=true,presetReps=''){const combo=!!ex.combo;const r=node('div','row'+(combo?' four':''));let title=combo?'Round '+set:ex.sides?'Set '+set:'Set '+set;if(ex.sides)title+=' '+(side==='L'?'Left':'Right');r.append(node('span','desc',title));if(combo)r.append(node('span','desc',movement));if(weightAllowed)r.append(makeInput(set,side,movement,'weight'));else r.append(node('span','small','Bodyweight'));r.append(makeInput(set,side,movement,'reps',presetReps));block.append(r)}
 const head=node('div','row head'+(ex.combo?' four':''));
 (ex.combo?['Round','Movement','Weight (lb)','Reps']:['Set / side','Weight (lb)','Reps']).forEach(s=>head.append(node('span','',s)));if(!ex.time)block.append(head);
-if(ex.time){for(let set=1;set<=ex.sets;set++){const r=node('div','row');r.append(node('span','desc','Round '+set),node('span','small','Bodyweight • timed'));r.append(makeInput(set,'both',ex.id,'seconds',ex.id==='jackknife'?40:20));block.append(r)}}
+if(ex.time){for(let set=1;set<=ex.sets;set++){for(const side of ex.timedSides?['R','L']:['both']){const r=node('div','row');r.append(node('span','desc',ex.timedSides?(side==='R'?'Right':'Left'):'Round '+set),node('span','small','Bodyweight • timed'));r.append(makeInput(set,side,ex.id,'seconds',ex.seconds??(ex.id==='jackknife'?40:20)));block.append(r)}}}
 else for(let set=1;set<=ex.sets;set++){const sides=ex.sides?['L','R']:['both'];for(const side of sides){const movements=ex.combo?ex.combo:[ex.id];for(const movement of movements){const weightAllowed=!(ex.noWeight||[]).includes(movement)&&!['Twisting Mnt Climber','Squat Jump','Push Up'].includes(ex.name);let preset=ex.presetRepsMap?.[movement]??ex.presetReps??'';addRow(set,side,movement,weightAllowed,preset)}}}
 const totals=node('div','total');block.append(totals);function recalc(){if(ex.time){totals.textContent='Timed bodyweight exercise';return}let total=0,left=0,right=0;for(const f of fields){if(f.field!=='reps')continue;let n=Number(f.input.value)||0;total+=n;if(f.side==='L')left+=n;if(f.side==='R')right+=n}totals.textContent=ex.sides?'Total reps: Left '+left+' + Right '+right+' = '+total:'Total reps across rounds: '+total}
 recalc();block.append(node('div','notelabel','Notes / modifications'));const note=node('textarea');note.rows=1;note.placeholder='e.g. on knees, lighter weight, form adjustments';const nk=key(ex,0,'','', 'notes');note.value=db[nk]??'';note.oninput=()=>{db[nk]=note.value;persist()};block.append(note);root.append(block)}
