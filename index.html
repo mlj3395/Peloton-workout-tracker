@@ -18,11 +18,12 @@ textarea{display:block;width:100%;border:1px solid #b4c2ce;border-radius:7px;pad
 .total{background:#eaf1f5;border-radius:6px;padding:7px 9px;font-size:13px;margin-top:8px}
 hr{border:0;border-top:1px solid #e0e6ed}.muted{font-size:13px;color:#586c7c;line-height:1.5}.small{font-size:12px;color:#52687a}
 @media(max-width:390px){.row{gap:4px}.row.four{gap:3px}.row .desc{font-size:12px}input{padding:9px 3px}}
-</style></head><body>
+.archivegroup{border-top:1px solid #dde6ec;padding:9px 0}.archivegroup h3{font-size:14px;margin:0 0 5px}.archiveitems{font-size:13px;line-height:1.65;white-space:pre-wrap}.archiveitems span{display:inline-block;margin:2px 7px 2px 0;border-radius:5px;background:#eaf1f5;padding:3px 6px}</style></head><body>
 <header><h1>Rebecca Kennedy — 4-Week Tracker</h1><p>Separate sets, movements and modifications • Saves on this device</p></header>
 <main>
 <div class="card"><div id="daytabs" class="tabs"></div><div id="weektabs" class="tabs" style="margin-top:8px"></div><p class="small" id="status">Changes save in this browser.</p></div>
 <div class="card" id="workouts"></div>
+<div class="card" id="historyCard" hidden><h2>Recovered earlier entries</h2><p class="muted">These are your original saved values from before the exercise layout changed. They are kept intact, even if a value cannot safely be assigned to a new field.</p><div id="history"></div></div>
 <div class="card"><b>Back up your progress</b><p class="muted">Your entries are saved only in this browser, not synchronized across devices. Export a backup to Files or iCloud regularly.</p><div class="tabs"><button id="export">Export backup</button><button id="import">Restore backup</button></div><input id="file" type="file" accept=".json" hidden></div>
 </main>
 <script>
@@ -66,7 +67,7 @@ function key(ex,set,side,movement,field){return ['v2',day,week,ex.id,set,side,mo
 function legacyKey(ex,set,side,field){return [day,week,ex.legacy,set,side,field].join('-')}
 function persist(){try{localStorage.setItem('rk-split-v1',JSON.stringify(db));$('status').textContent='Saved on this device ✓'}catch(e){$('status').textContent='Save unsuccessful; please export a backup'}}
 function node(tag,cls,txt){const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x}
-function draw(){for(let [id,labels,value,callback] of [['daytabs',['Pull','Legs & Core','Push'],day,x=>day=x],['weektabs',['Week 1','Week 2','Week 3','Week 4'],week,x=>week=x]]){const box=$(id);box.replaceChildren();labels.forEach((label,i)=>{const b=node('button',i===value?'active':'',label);b.onclick=()=>{callback(i);draw()};box.append(b)})}const root=$('workouts');root.replaceChildren();split[day].forEach(ex=>renderExercise(root,ex))}
+function draw(){for(let [id,labels,value,callback] of [['daytabs',['Pull','Legs & Core','Push'],day,x=>day=x],['weektabs',['Week 1','Week 2','Week 3','Week 4'],week,x=>week=x]]){const box=$(id);box.replaceChildren();labels.forEach((label,i)=>{const b=node('button',i===value?'active':'',label);b.onclick=()=>{callback(i);draw()};box.append(b)})}const root=$('workouts');root.replaceChildren();split[day].forEach(ex=>renderExercise(root,ex));drawHistory()}
 function renderExercise(root,ex){const block=node('section','work');block.append(node('h2','',ex.name));if(ex.note)block.append(node('p','hint',ex.note));let fields=[];
 function makeInput(set,side,movement,field,preset){const k=key(ex,set,side,movement,field),inp=node('input');inp.inputMode='decimal';inp.setAttribute('aria-label',ex.name+' set '+set+' '+side+' '+movement+' '+field);
 const old=ex.legacy!==undefined&&!ex.combo&&!ex.time?db[legacyKey(ex,set,side,field)]:undefined;
@@ -78,6 +79,34 @@ if(ex.time){for(let set=1;set<=ex.sets;set++){for(const side of ex.timedSides?['
 else for(let set=1;set<=ex.sets;set++){if(ex.sequence){for(const [side,movement] of ex.sequence)addRow(set,side,movement,true,'')}else{const sides=ex.sides?['L','R']:['both'];for(const side of sides){const movements=ex.combo?ex.combo:[ex.id];for(const movement of movements){const weightAllowed=!(ex.noWeight||[]).includes(movement)&&!['Twisting Mnt Climber','Squat Jump','Push Up'].includes(ex.name);let preset=ex.presetRepsMap?.[movement]??ex.presetReps??'';addRow(set,side,movement,weightAllowed,preset)}}}}
 const totals=node('div','total');block.append(totals);function recalc(){if(ex.time){totals.textContent='Timed bodyweight exercise';return}let total=0,left=0,right=0;for(const f of fields){if(f.field!=='reps')continue;let n=Number(f.input.value)||0;total+=n;if(f.side==='L')left+=n;if(f.side==='R')right+=n}totals.textContent=ex.sides?'Total reps: Left '+left+' + Right '+right+' = '+total:ex.sequence?'Total reps across both legs and movements: '+total:'Total reps across rounds: '+total}
 recalc();block.append(node('div','notelabel','Notes / modifications'));const note=node('textarea');note.rows=1;note.placeholder='e.g. on knees, lighter weight, form adjustments';const nk=key(ex,0,'','', 'notes');note.value=db[nk]??'';note.oninput=()=>{db[nk]=note.value;persist()};block.append(note);root.append(block)}
+
+function drawHistory(){
+const rows={};
+const dayOneNames=['3 Point Row','Twisting Bicep Curl','Lat Pullover','Reverse Grip Row (original)','Wide Grip Bent-Over Row (original)','Lateral Curl','Hammer Curl','Bicep Curl','Double Snatch','Reverse Fly','Renegade Row','Mountain Climber'];
+const dayTwoNames={'split-squat':'Front / Split Lunge (original)','rev-lunge':'Reverse Lunge (original)','deadlift-combo':'Paired Deadlifts (original)','db-squat':'Dumbbell Squat (original)','rdl':'Romanian Deadlift (original)','emom':'EMOM (original)'};
+const backupKeys=Object.keys(db);
+for(const k of backupKeys){
+ let group='',label='';
+ if(day===0){
+  const m=k.match(/^0-(\d+)-(\d+)-(\d+)-([LR])-(weight|reps)$/);
+  if(!m||Number(m[1])!==week)continue;
+  const [,wk,idx,set,side,field]=m;group=dayOneNames[+idx]||'Other original exercise '+idx;
+  label='Set '+set+' '+(side==='L'?'Left':'Right')+' '+field+': '+db[k];
+ }else if(day===1){
+  const p=k.split('|');if(p.length!==8||p[0]!=='v2'||p[1]!=='1'||+p[2]!==week)continue;
+  if(!['split-squat','rev-lunge','deadlift-combo'].includes(p[3]))continue;
+  group=dayTwoNames[p[3]]||p[3];
+  label=+p[4]===0?'Note: '+db[k]:'Set '+p[4]+' '+(p[5]==='both'?'':p[5]+' ')+(p[6]===p[3]?'':p[6]+' ')+p[7]+': '+db[k];
+ }else continue;
+ if(db[k]==='')continue;
+ (rows[group]??=[]).push(label);
+}
+const card=$('historyCard'),root=$('history');root.replaceChildren();
+const groups=Object.entries(rows);
+card.hidden=groups.length===0;
+for(const [title,vals] of groups){const sec=node('div','archivegroup');sec.append(node('h3','',title));const box=node('div','archiveitems');for(const value of vals)box.append(node('span','',value));sec.append(box);root.append(sec)}
+}
+
 $('export').onclick=()=>{const a=node('a'),u=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));a.href=u;a.download='Rebecca-Tracker-Backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),3000)};
-$('import').onclick=()=>$('file').click();$('file').onchange=async e=>{try{const file=e.target.files?.[0];if(!file)return;const v=JSON.parse(await file.text());if(!v||Array.isArray(v)||typeof v!=='object')throw Error();if(confirm('Replace current saved progress with this backup?')){db=v;persist();draw()}}catch(e){alert('That backup file was not valid.')}e.target.value=''};draw();
+$('import').onclick=()=>$('file').click();$('file').onchange=async e=>{try{const file=e.target.files?.[0];if(!file)return;const v=JSON.parse(await file.text());if(!v||Array.isArray(v)||typeof v!=='object')throw Error();if(confirm('Merge this backup with your saved progress? Existing entries will be kept; missing entries will be recovered.')){db={...v,...db};persist();draw();alert('Backup merged. Review your entries and the Recovered earlier entries section.')}}catch(e){alert('That backup file was not valid.')}e.target.value=''};draw();
 </script></body></html>
