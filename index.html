@@ -22,6 +22,7 @@ hr{border:0;border-top:1px solid #e0e6ed}.muted{font-size:13px;color:#586c7c;lin
 <header><h1>Rebecca Kennedy — 4-Week Tracker</h1><p>Separate sets, movements and modifications • Saves on this device</p></header>
 <main>
 <div class="card"><div id="daytabs" class="tabs"></div><div id="weektabs" class="tabs" style="margin-top:8px"></div><p class="small" id="status">Changes save in this browser.</p></div>
+<div class="card" id="cloudPanel"><b>Cloud backup & sync</b><p class="muted" id="cloudStatus" role="status">Loading Google sign-in…</p><div class="tabs"><button id="googleSignIn" type="button" hidden>Sign in with Google</button><button id="googleSignOut" type="button" hidden>Sign out</button></div><p class="small">Your existing workout entries remain on this device until you sign in. After sign-in, changes will save automatically to your private cloud account.</p></div>
 <div class="card" id="workouts"></div>
 <div class="card" id="historyCard" hidden><h2>Recovered earlier entries</h2><p class="muted">These are your original saved values from before the exercise layout changed. They are kept intact, even if a value cannot safely be assigned to a new field.</p><div id="history"></div></div>
 <div class="card"><b>Back up your progress</b><p class="muted">Your entries are saved only in this browser, not synchronized across devices. To display old workout records in the corrected exercise fields, choose Restore backup and select the converted Week 1 JSON file. Restore merges entries; it does not erase other saved records. Export a backup to Files or iCloud regularly.</p><div class="tabs"><button id="export">Export backup</button><button id="import">Restore backup</button></div><input id="file" type="file" accept=".json" hidden></div>
@@ -65,7 +66,7 @@ if(!db||typeof db!=='object'||Array.isArray(db))db={};
 const $=id=>document.getElementById(id);
 function key(ex,set,side,movement,field){return ['v2',day,week,ex.id,set,side,movement,field].join('|')}
 function legacyKey(ex,set,side,field){return [day,week,ex.legacy,set,side,field].join('-')}
-function persist(){try{localStorage.setItem('rk-split-v1',JSON.stringify(db));$('status').textContent='Saved on this device ✓'}catch(e){$('status').textContent='Save unsuccessful; please export a backup'}}
+function persist(){try{localStorage.setItem('rk-split-v1',JSON.stringify(db));$('status').textContent='Saved on this device ✓';window.queueWorkoutCloudSave?.()}catch(e){$('status').textContent='Local save unsuccessful; please export a backup'}}
 function node(tag,cls,txt){const x=document.createElement(tag);if(cls)x.className=cls;if(txt!==undefined)x.textContent=txt;return x}
 function draw(){for(let [id,labels,value,callback] of [['daytabs',['Pull','Legs & Core','Push'],day,x=>day=x],['weektabs',['Week 1','Week 2','Week 3','Week 4'],week,x=>week=x]]){const box=$(id);box.replaceChildren();labels.forEach((label,i)=>{const b=node('button',i===value?'active':'',label);b.onclick=()=>{callback(i);draw()};box.append(b)})}const root=$('workouts');root.replaceChildren();split[day].forEach(ex=>renderExercise(root,ex));drawHistory()}
 function renderExercise(root,ex){const block=node('section','work');block.append(node('h2','',ex.name));if(ex.note)block.append(node('p','hint',ex.note));let fields=[];
@@ -109,4 +110,84 @@ for(const [title,vals] of groups){const sec=node('div','archivegroup');sec.appen
 
 $('export').onclick=()=>{const a=node('a'),u=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));a.href=u;a.download='Rebecca-Tracker-Backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),3000)};
 $('import').onclick=()=>$('file').click();$('file').onchange=async e=>{try{const file=e.target.files?.[0];if(!file)return;const v=JSON.parse(await file.text());if(!v||Array.isArray(v)||typeof v!=='object')throw Error();if(confirm('Merge this backup with your saved progress? Existing entries will be kept; missing entries will be recovered.')){db={...v,...db};persist();draw();alert('Backup merged. Review your entries and the Recovered earlier entries section.')}}catch(e){alert('That backup file was not valid.')}e.target.value=''};draw();
+</script>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+import {getAuth,GoogleAuthProvider,onAuthStateChanged,signInWithPopup,signOut} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+import {getFirestore,doc,getDoc,setDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+const firebaseConfig={
+ apiKey:"AIzaSyBgav9_W3kIxmxQJnXImZxwZ4PLyDjR8K8",
+ authDomain:"peloton-workout-tracker-74b9a.firebaseapp.com",
+ projectId:"peloton-workout-tracker-74b9a",
+ storageBucket:"peloton-workout-tracker-74b9a.firebasestorage.app",
+ messagingSenderId:"747954233743",
+ appId:"1:747954233743:web:371986a9d5b978c96c6bfa"
+};
+const status=document.getElementById('cloudStatus'),login=document.getElementById('googleSignIn'),logout=document.getElementById('googleSignOut');
+function show(t){status.textContent=t}
+let auth,firestore,ref=null,ready=false,saveTimer=null,serial=Promise.resolve();
+window.queueWorkoutCloudSave=()=>{
+ if(!ready||!ref)return;
+ show('Saving to cloud…');
+ clearTimeout(saveTimer);
+ saveTimer=setTimeout(()=>{
+  const data=JSON.parse(JSON.stringify(db));
+  const dest=ref;
+  serial=serial.catch(()=>{}).then(()=>setDoc(dest,{entries:data,updatedAt:serverTimestamp()})).then(()=>{
+   if(ready&&ref===dest)show('Saved to cloud ✓');
+  }).catch(err=>{
+   show('Cloud save failed: '+err.message+'. Data remains on this device; please export a backup.');
+  });
+ },500);
+};
+try{
+ const app=initializeApp(firebaseConfig);
+ auth=getAuth(app);firestore=getFirestore(app);
+ login.onclick=async()=>{
+  login.disabled=true;show('Opening Google sign-in…');
+  try{await signInWithPopup(auth,new GoogleAuthProvider())}
+  catch(err){show('Sign-in failed: '+err.message+'. If you see an unauthorized-domain error, add mlj3395.github.io in Firebase Authentication → Settings → Authorized domains.')}
+  finally{login.disabled=false}
+ };
+ logout.onclick=async()=>{
+  clearTimeout(saveTimer);
+  try{await serial.catch(()=>{});await signOut(auth)}catch(err){show('Sign-out error: '+err.message)}
+ };
+ onAuthStateChanged(auth,async user=>{
+  ready=false;ref=null;clearTimeout(saveTimer);
+  if(!user){
+   login.hidden=false;logout.hidden=true;
+   show('Not signed in — current entries are saved only on this iPad. Sign in to start cloud saving.');
+   return;
+  }
+  login.hidden=true;logout.hidden=false;
+  show('Connecting to your private workout storage…');
+  try{
+   const target=doc(firestore,'users',user.uid,'workouts','tracker');
+   const snapshot=await getDoc(target);
+   if(auth.currentUser?.uid!==user.uid)return;
+   const stored=snapshot.exists()?snapshot.data().entries||{}:{};
+   if(!stored||typeof stored!=='object'||Array.isArray(stored))throw Error('Unexpected cloud data format');
+   // Cloud values are authoritative for matching keys; locally stored unique keys are preserved.
+   const combined={...db,...stored};
+   db=combined;
+   localStorage.setItem('rk-split-v1',JSON.stringify(db));
+   draw();
+   ref=target;
+   // On the first login, or when local entries weren't present in cloud, merge without discarding either source.
+   if(!snapshot.exists()||Object.keys(db).some(k=>!Object.hasOwn(stored,k))){
+     show('Migrating your saved entries to the cloud…');
+     await setDoc(target,{entries:JSON.parse(JSON.stringify(db)),updatedAt:serverTimestamp()});
+   }
+   ready=true;
+   show('Signed in as '+(user.email||'your Google account')+' • Saved to cloud ✓');
+  }catch(err){
+   ready=false;ref=null;
+   show('Cloud connection failed: '+err.message+'. Your local entries are still intact. Check Firestore rules and your connection.');
+  }
+ },err=>show('Authentication error: '+err.message));
+}catch(err){
+ login.hidden=true;logout.hidden=true;
+ show('Could not load Firebase: '+err.message+'. The tracker still saves locally; export backups.');
+}
 </script></body></html>
