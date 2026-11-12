@@ -24,7 +24,7 @@ hr{border:0;border-top:1px solid #e0e6ed}.muted{font-size:13px;color:#586c7c;lin
 <div class="card"><div id="daytabs" class="tabs"></div><div id="weektabs" class="tabs" style="margin-top:8px"></div><p class="small" id="status">Changes save in this browser.</p></div>
 <div class="card" id="workouts"></div>
 <div class="card" id="historyCard" hidden><h2>Recovered earlier entries</h2><p class="muted">These are your original saved values from before the exercise layout changed. They are kept intact, even if a value cannot safely be assigned to a new field.</p><div id="history"></div></div>
-<div class="card"><b>Back up your progress</b><p class="muted">Your entries are saved only in this browser, not synchronized across devices. Export a backup to Files or iCloud regularly.</p><div class="tabs"><button id="export">Export backup</button><button id="import">Restore backup</button></div><input id="file" type="file" accept=".json" hidden></div>
+<div class="card"><b>Back up your progress</b><p class="muted">Your entries are saved only in this browser, not synchronized across devices. To display old workout records in the corrected exercise fields, choose Restore backup and select the converted Week 1 JSON file. Restore merges entries; it does not erase other saved records. Export a backup to Files or iCloud regularly.</p><div class="tabs"><button id="export">Export backup</button><button id="import">Restore backup</button></div><input id="file" type="file" accept=".json" hidden></div>
 </main>
 <script>
 'use strict';
@@ -41,9 +41,9 @@ const split=[
 {id:'hollow',name:'Hollow Body Hold',sets:2,time:true,note:'Bodyweight • 20 seconds per round'}
 ],
 [
-{id:'lunge-pair',name:'Front Lunge → Reverse Lunge',sets:2,sequence:[['R','Front Lunge'],['R','Reverse Lunge'],['L','Front Lunge'],['L','Reverse Lunge']],note:'ONE dumbbell. Set 1: right leg front, right leg reverse, left leg front, left leg reverse. Repeat once for Set 2.'},
+{id:'lunge-pair',name:'Front Lunge → Reverse Lunge',sets:2,sequence:[['R','Front Lunge'],['R','Reverse Lunge'],['L','Front Lunge'],['L','Reverse Lunge']],note:'ONE dumbbell. Set 1: right leg front, right leg reverse, left leg front, left leg reverse. Repeat once for Set 2. Week 1 backup rows have been mapped in their original order to right/left in each set.'},
 {id:'db-squat',name:'Dumbbell Squat',sets:3,legacy:2,note:'TWO dumbbells — enter total combined weight (e.g. 15 + 15 = 30 lb).'},
-{id:'deadlift-pair',name:'Kickstand Deadlift → Dumbbell Single Leg Deadlift',sets:4,sequence:[['R','Kickstand Deadlift'],['R','Dumbbell Single Leg Deadlift'],['L','Kickstand Deadlift'],['L','Dumbbell Single Leg Deadlift']],note:'ONE dumbbell for each movement. Complete both movements on the right, then both on the left. That completes one set.'},
+{id:'deadlift-pair',name:'Kickstand Deadlift → Dumbbell Single Leg Deadlift',sets:2,sequence:[['R','Kickstand Deadlift'],['R','Dumbbell Single Leg Deadlift'],['L','Kickstand Deadlift'],['L','Dumbbell Single Leg Deadlift']],note:'ONE dumbbell for each movement. Complete both movements on the right, then both on the left. That completes one set. Repeat for Set 2.'},
 {id:'rdl',name:'Romanian Deadlift',sets:3,legacy:5,note:'If using two dumbbells, enter their combined weight (e.g. two 15 lb dumbbells = 30 lb).'},
 {id:'single-stretch',name:'Single / Straight Leg Stretch',sets:1,time:true,seconds:60,note:'1 minute • bodyweight'},
 {id:'oblique',name:'Oblique Tuck-Up (Right / Left)',sets:1,time:true,timedSides:true,seconds:30,note:'30 seconds right + 30 seconds left • bodyweight'},
