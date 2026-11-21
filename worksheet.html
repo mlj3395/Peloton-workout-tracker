@@ -169,7 +169,8 @@ function importObject(obj){const source=(obj&&typeof obj==='object'&&!Array.isAr
 let mapped=0,unmatched=0;for(const [k,v] of Object.entries(source)){if(v==null||v==='')continue;
 if(k.match(/^[012]:\d+:/)){if(saved[k]===undefined||saved[k]==='')saved[k]=v;mapped++}
 else if(applyRecord(k,v))mapped++;
-else{extras[k]=v;unmatched++}}
+else{if(extras[k]===undefined)extras[k]=v;unmatched++}}
+if(obj&&obj.unmatched&&typeof obj.unmatched==='object'&&!Array.isArray(obj.unmatched)){for(const [k,v] of Object.entries(obj.unmatched)){if(v==null||v==='')continue;if(extras[k]===undefined)extras[k]=v;unmatched++}}
 localSave();render();return {mapped,unmatched}}
 function download(){let blob=new Blob([JSON.stringify({entries:saved,unmatched:extras},null,2)],{type:'application/json'});let url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RK-Worksheet-Backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}
 el('backup').onclick=download;
