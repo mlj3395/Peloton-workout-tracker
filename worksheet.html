@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rebecca Kennedy — Worksheet Tracker</title>
+<style>
+:root{font-family:Arial,system-ui,sans-serif;color:#21323e;background:#f1f3f5}
+*{box-sizing:border-box}body{margin:0}header{padding:16px max(12px,calc((100vw - 900px)/2));background:#243944;color:#fff}header h1{font-size:21px;margin:0 0 4px}header small{opacity:.85}
+main{max-width:900px;margin:auto;padding:12px}.panel{background:white;padding:13px;border-radius:10px;margin-bottom:12px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}button{font-size:14px;cursor:pointer;border:1px solid #9baeb9;border-radius:6px;background:white;color:#243e50;padding:9px 12px;min-height:39px}.tabs button{flex:1}.tabs button.active{background:#243e50;color:white}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0}.status{font-size:13px;color:#435563;line-height:1.45}.actions{display:flex;flex-wrap:wrap;gap:6px}
+.sheet{width:100%;border-collapse:collapse;table-layout:fixed;border:2px solid #667985;background:#d8e8ed}
+.sheet thead th{padding:9px 5px;background:#d3d3d3;border:1px solid #687a84;text-align:center;font-size:15px}
+.sheet .meta th{padding:6px;border:1px solid #83929a;font-size:13px;text-align:left}
+.sheet .colhead th{font-size:13px;padding:6px;border:1px solid #7c8d98;text-decoration:underline}
+.sheet td{border:1px solid #82939d;padding:0;height:35px}.sheet td.exlabel{font-size:12px;font-weight:700;vertical-align:middle;white-space:pre-line;padding:7px 8px}
+.sheet td.cell{padding:2px}.sheet td.cell input{width:100%;height:32px;border:0;border-radius:0;text-align:center;background:rgba(255,255,255,.38);color:#152d40;font:16px system-ui;padding:2px}
+.sheet td.sub{font-size:12px;font-weight:600;padding:3px 6px;white-space:normal;line-height:1.25}
+.sheet td.timing{font-size:12px;text-align:center;font-weight:600;padding:4px}
+.sheet td.notes{padding:4px}.sheet td.notes input{width:100%;border:0;background:rgba(255,255,255,.25);font:13px system-ui;padding:6px}
+.sheet .meta input{border:1px solid #758a94;background:rgba(255,255,255,.55);padding:5px;font:14px system-ui;max-width:150px}
+.day0{background:#cfe4e8}.day0 tr.group:nth-child(even) td{background:rgba(39,104,118,.11)}
+.day1{background:#e3d9f0}.day1 tr.group:nth-child(even) td{background:rgba(101,78,160,.10)}
+.day2{background:#ffe1bf}.day2 tr.group:nth-child(even) td{background:rgba(217,124,47,.11)}
+.sheet .setdivider td{border-top:2px solid #7b8991}
+.help{font-size:12px;line-height:1.5;color:#475f6d}
+details{padding:9px 0}summary{font-weight:bold;cursor:pointer}
+#oldRecords{font:12px/1.5 monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow-y:auto;background:#f4f6f8;padding:8px}
+@media(max-width:460px){main{padding:6px}.panel{padding:8px}.sheet td.exlabel{font-size:11px;padding:5px}.sheet td.sub{font-size:11px;padding:4px}.sheet td.cell input{font-size:15px}.sheet td.timing{font-size:11px}}
+</style></head>
+<body><header><h1>RK 3-Day Split — Worksheet</h1><small>A worksheet-style tracker • Week-by-week • Automatic cloud saving</small></header>
+<main>
+<div class="panel">
+<div class="tabs" id="dayTabs"></div><div class="tabs" id="weekTabs" style="margin-top:9px"></div>
+<div class="bar"><span id="cloud" class="status">Loading Google connection…</span><div class="actions"><button id="signIn" hidden>Sign in with Google</button><button id="signOut" hidden>Sign out</button></div></div>
+</div>
+<div class="panel"><table class="sheet" id="sheet"></table><p class="help">Weight means total dumbbell weight used (two 15-lb dumbbells = 30 lb). Only weight copies to the immediately following blank weight cell. Every entry has its own notes cell where useful.</p></div>
+<div class="panel">
+<div class="actions"><button id="backup">Export worksheet backup</button><button id="import">Import past stats (JSON)</button><input id="importFile" hidden type="file" accept=".json,application/json"></div>
+<p class="help">Import your previous tracker backups for Week 1 or Week 2. Existing worksheet entries are never overwritten by an import. Uncertain old entries are preserved for reference, not guessed into fields.</p>
+<details><summary>Previous data that needs review</summary><div id="oldRecords">No unmatched entries yet.</div></details>
+</div>
+</main>
+<script>
+'use strict';
+const defs=[
+{title:'DAY 1 — UPPER BODY PULL',groups:[
+['3-POINT ROW\n(RIGHT/LEFT)',rows(3,['Left','Right'])],
+['TWISTING\nBICEP CURL',rows(3,['Left','Right'])],
+['LAT\nPULLOVER',rows(3)],
+['SUPINATED /\nREVERSE GRIP ROW',rows(3,['Reverse grip','Fly row'])],
+['WIDE GRIP\nBENT OVER ROW',rows(3)],
+['DIRTY 30s:\nLATERAL → HAMMER → BICEP',rows(3,['Lateral curl ×10','Hammer curl ×10','Bicep curl ×10'])],
+['DOUBLE\nSNATCH',rows(3)],
+['REVERSE FLY',rows(2)],
+['REN. ROW',timed('30 seconds')],
+['MTN CLIMBER',timed('30 seconds')],
+['JACKKNIFE',timed('40 seconds')],
+['HOLLOWBODY',timed('20 seconds')]
+]},
+{title:'DAY 2 — LEGS & CORE',groups:[
+['FRONT / SPLIT SQUAT → REVERSE LUNGE',rows(2,['Right • front','Right • reverse','Left • front','Left • reverse'])],
+['DUMBBELL\nSQUAT',rows(3)],
+['KICKSTAND DEADLIFT → SINGLE LEG DEADLIFT',rows(2,['Right • kickstand','Right • single leg','Left • kickstand','Left • single leg'])],
+['ROMANIAN\nDEADLIFT',rows(3)],
+['SINGLE / STRAIGHT\nLEG STRETCH',timed('1 minute')],
+['OBLIQUE TUCK-UP\n(R/L)',timed('30 sec right / 30 sec left')],
+['BUTTERFLY SIT-UP',timed('1 minute')],
+['EMOM (DB SWING / JUMP SQUAT)',rows(5,['Dumbbell swing','Jump squat'],['Jump squat'])]
+]},
+{title:'DAY 3 — UPPER BODY PUSH',groups:[
+['CHEST PRESS',rows(4)],
+['OVERHEAD PRESS\n(RIGHT/LEFT)',rows(3,['Right','Left'])],
+['CHEST FLY',rows(3)],
+['SKULL CRUSHER\n(21s)',rows(3)],
+['LATERAL RAISE\n(RIGHT/LEFT)',rows(3,['Right','Left'])],
+['TRICEP KICKBACK',rows(3)],
+['PUSH UP',rows(3,[],['*'])]
+]}];
+function rows(sets,moves,bodyweight){const a=[];for(let s=1;s<=sets;s++)for(const move of (moves?.length?moves:['']))a.push({label:(moves?.length?move:'Set '+s),set:s,movement:move||'',bodyweight:(bodyweight||[]).includes(move)||bodyweight?.includes('*')});return a}
+function timed(label){return [{label,timed:true}]}
+let day=0,week=0,saved={},extras={},authOn=false,cloudReady=false,queue=null,cloudSave=null;
+try{let raw=JSON.parse(localStorage.getItem('rk-worksheet-v1')||'{}');saved=raw?.entries||{};extras=raw?.unmatched||{}}catch(e){}
+const el=id=>document.getElementById(id);
+const key=(d,w,g,i,f)=>[d,w,g,i,f].join(':');
+function localSave(){try{localStorage.setItem('rk-worksheet-v1',JSON.stringify({entries:saved,unmatched:extras}));}catch(e){el('cloud').textContent='Local save failed — export backup'}if(cloudReady)window.queueSheetSave?.()}
+function tabs(){[['dayTabs',['Pull','Legs & Core','Push'],day,n=>day=n],['weekTabs',['Week 1','Week 2','Week 3','Week 4'],week,n=>week=n]].forEach(([id,labels,selected,change])=>{el(id).replaceChildren();labels.forEach((l,i)=>{let b=document.createElement('button');b.textContent=l;b.className=i===selected?'active':'';b.onclick=()=>{change(i);render()};el(id).append(b)})})}
+function textInput(k,label,field){const input=document.createElement('input');input.setAttribute('aria-label',label);input.value=saved[k]??'';input.inputMode=field==='notes'?'text':'decimal';if(field==='notes')input.placeholder='Notes / modifications';input.oninput=()=>{saved[k]=input.value;localSave()};return input}
+function render(){
+tabs();const tbl=el('sheet');tbl.replaceChildren();tbl.className='sheet day'+day;
+const colgroup=document.createElement('colgroup');[35,22,17,15,11].forEach(n=>{const c=document.createElement('col');c.style.width=n+'%';colgroup.append(c)});tbl.append(colgroup);
+const thead=document.createElement('thead'),head=document.createElement('tr'),th=document.createElement('th');th.colSpan=5;th.textContent='RK 3-DAY SPLIT: '+defs[day].title;head.append(th);thead.append(head);
+const meta=document.createElement('tr');meta.className='meta';let m=document.createElement('th');m.colSpan=2;m.textContent='Week: '+(week+1);meta.append(m);m=document.createElement('th');m.colSpan=3;m.append('Date: ');m.append(textInput(key(day,week,'date',0,'date'),'Workout date','notes'));meta.append(m);thead.append(meta);
+const hdr=document.createElement('tr');hdr.className='colhead';for(const [label,n] of [['Exercise',1],['Movement / set',1],['Weight',1],['Reps / time',1],['Notes',1]]){const th=document.createElement('th');th.colSpan=n;th.textContent=label;hdr.append(th)}thead.append(hdr);tbl.append(thead);
+const tbody=document.createElement('tbody');for(let g=0;g<defs[day].groups.length;g++){const [name,items]=defs[day].groups[g];items.forEach((r,i)=>{let tr=document.createElement('tr');tr.className='group'+(i===0?' setdivider':'');
+if(i===0){let label=document.createElement('td');label.className='exlabel';label.rowSpan=items.length;label.textContent=name;tr.append(label)}
+let td=document.createElement('td');td.className='sub';td.textContent=r.label;tr.append(td);
+td=document.createElement('td');td.className=r.timed?'timing':'cell';
+if(r.timed||r.bodyweight){td.textContent='—'}else{let inp=textInput(key(day,week,g,i,'weight'),name+' '+r.label+' weight','weight');inp.addEventListener('change',()=>{if(!inp.value)return;const next=tbody.querySelector('[data-weight-key="'+key(day,week,g,i+1,'weight')+'"]');if(next&&!next.value){next.value=inp.value;saved[key(day,week,g,i+1,'weight')]=inp.value;localSave()}});inp.dataset.weightKey=key(day,week,g,i,'weight');td.append(inp)}tr.append(td);
+td=document.createElement('td');td.className='cell';if(r.timed){td.className='timing';td.textContent=r.label}else{td.append(textInput(key(day,week,g,i,'reps'),name+' '+r.label+' reps','reps'))}tr.append(td);
+td=document.createElement('td');td.className='notes';td.append(textInput(key(day,week,g,i,'notes'),name+' '+r.label+' notes','notes'));tr.append(td);tbody.append(tr)})}
+tbl.append(tbody);renderExtra()}
+function renderExtra(){const keys=Object.entries(extras);el('oldRecords').textContent=keys.length?keys.map(([k,v])=>k+': '+v).join('\n'):'No unmatched entries yet.'}
+function applyRecord(k,v){if(v==null||v==='')return false;let m=k.match(/^v2\|([012])\|(\d+)\|([^|]+)\|(\d+)\|([^|]*)\|([^|]*)\|(weight|reps|notes|seconds)$/);if(!m)return false;let [,dayRaw,weekRaw,id,setRaw,side,movement,field]=m;let d=+dayRaw,w=+weekRaw,s=+setRaw;if(w<0||w>3)return false;let g=-1,i=-1;
+const findGroup=x=>defs[d].groups.findIndex(([name])=>name.startsWith(x));
+const ix=(group,index)=>{g=group;i=index};
+if(d===0){let mapping={'three-point':0,'twisting-curl':1,'lat-pull':2,'row-combo':3,'snatch':6,'fly-circuit':7,'jackknife':10,'hollow':11};if(mapping[id]===undefined)return false;g=mapping[id];
+if(['three-point','twisting-curl'].includes(id))i=(s-1)*2+(side==='R'?1:0);
+else if(id==='row-combo')i=(s-1)*2+(movement==='Fly Row'?1:0);
+else if(id==='fly-circuit'){if(movement!=='Reverse Fly')return false;i=s-1}
+else i=s-1;
+}
+else if(d===1){if(id==='lunge-pair'){ix(0,(s-1)*4+(side==='R'?0:2)+(movement==='Reverse Lunge'?1:0))}
+else if(id==='split-squat'||id==='rev-lunge'){ix(0,Math.floor((s-1)/2)*4+((s-1)%2)*2+(id==='rev-lunge'?1:0))}
+else if(id==='db-squat')ix(1,s-1);
+else if(id==='deadlift-pair')ix(2,(s-1)*4+(side==='R'?0:2)+(movement.includes('Single')?1:0));
+else if(id==='deadlift-combo')ix(2,(Math.floor((s-1)/2))*4+((s-1)%2)*2+(movement.includes('Single')?1:0));
+else if(id==='rdl')ix(3,s-1);
+else if(id==='emom')ix(7,(s-1)*2+(movement==='Jump Squat'?1:0));
+else return false}
+else return false;
+if(g<0||i<0||i>=(defs[d].groups[g]?.[1]?.length||0))return false;
+if(field==='seconds')return false;
+if(field==='notes'){if(s!==0)return false;return false}
+const dest=key(d,w,g,i,field);
+if(saved[dest]!==undefined&&saved[dest]!==''&&saved[dest]!==v)return false;
+if(saved[dest]===undefined||saved[dest]==='')saved[dest]=v;
+return true}
+function importObject(obj){const source=(obj&&typeof obj==='object'&&!Array.isArray(obj))?(obj.entries&&typeof obj.entries==='object'?obj.entries:obj):null;if(!source)throw Error('Invalid JSON');
+let mapped=0,unmatched=0;for(const [k,v] of Object.entries(source)){if(v==null||v==='')continue;
+if(k.match(/^[012]:\d+:/)){if(saved[k]===undefined||saved[k]==='')saved[k]=v;mapped++}
+else if(applyRecord(k,v))mapped++;
+else{extras[k]=v;unmatched++}}
+localSave();render();return {mapped,unmatched}}
+function download(){let blob=new Blob([JSON.stringify({entries:saved,unmatched:extras},null,2)],{type:'application/json'});let url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RK-Worksheet-Backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}
+el('backup').onclick=download;
+el('import').onclick=()=>el('importFile').click();
+el('importFile').onchange=async e=>{let file=e.target.files?.[0];if(!file)return;try{let object=JSON.parse(await file.text());let res=importObject(object);alert('Imported '+res.mapped+' entries; '+res.unmatched+' preserved for review. Existing worksheet data was not overwritten.')}catch(err){alert('Import failed: '+err.message)}e.target.value=''};
+render();
+</script>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+import {getAuth,GoogleAuthProvider,onAuthStateChanged,signInWithPopup,signOut} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+import {getFirestore,doc,getDoc,setDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+const config={apiKey:'AIzaSyBgav9_W3kIxmxQJnXImZxwZ4PLyDjR8K8',authDomain:'peloton-workout-tracker-74b9a.firebaseapp.com',projectId:'peloton-workout-tracker-74b9a',storageBucket:'peloton-workout-tracker-74b9a.firebasestorage.app',messagingSenderId:'747954233743',appId:'1:747954233743:web:371986a9d5b978c96c6bfa'};
+let userRef=null,chain=Promise.resolve();
+const message=x=>el('cloud').textContent=x;
+try{
+const app=initializeApp(config);const auth=getAuth(app),store=getFirestore(app);
+el('signIn').onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>message('Sign-in failed: '+e.message));
+el('signOut').onclick=async()=>{await chain.catch(()=>{});await signOut(auth)};
+window.queueSheetSave=()=>{if(!cloudReady||!userRef)return;clearTimeout(queue);message('Saving…');queue=setTimeout(()=>{const ref=userRef,content=structuredClone({entries:saved,unmatched:extras});chain=chain.catch(()=>{}).then(()=>setDoc(ref,{...content,updatedAt:serverTimestamp()})).then(()=>{if(userRef===ref)message('Saved to cloud ✓')}).catch(e=>message('Cloud save failed: '+e.message));},600)};
+onAuthStateChanged(auth,async user=>{cloudReady=false;userRef=null;clearTimeout(queue);el('signIn').hidden=!!user;el('signOut').hidden=!user;if(!user){message('Not signed in — saving only on this device');return}message('Loading private workout worksheet…');try{
+const ref=doc(store,'users',user.uid,'workouts','worksheet-v1');
+const snap=await getDoc(ref);if(auth.currentUser?.uid!==user.uid)return;
+const remote=snap.exists()?snap.data():{};saved={...saved,...(remote.entries||{})};extras={...extras,...(remote.unmatched||{})};render();localSave();
+userRef=ref;cloudReady=true;window.queueSheetSave();
+message('Signed in — syncing worksheet…')
+}catch(e){message('Cloud connection failed: '+e.message+'. Entries remain on this device')}})
+}catch(e){message('Firebase could not load: '+e.message+'. Entries will save locally only')}
+</script>
+</body></html>
