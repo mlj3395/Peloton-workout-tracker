@@ -44,11 +44,11 @@ details{padding:9px 0}summary{font-weight:bold;cursor:pointer}
 const defs=[
 {title:'DAY 1 — UPPER BODY PULL',groups:[
 ['3-POINT ROW\n(RIGHT/LEFT)',rows(3,['Left','Right'])],
-['TWISTING\nBICEP CURL',rows(3,['Left','Right'])],
+['TWISTING\nBICEP CURL',rows(3)],
 ['LAT\nPULLOVER',rows(3)],
-['SUPINATED /\nREVERSE GRIP ROW',rows(3,['Reverse grip','Fly row'])],
+['SUPINATED /\nREVERSE GRIP ROW',rows(3)],
 ['WIDE GRIP\nBENT OVER ROW',rows(3)],
-['DIRTY 30s:\nLATERAL → HAMMER → BICEP',rows(3,['Lateral curl ×10','Hammer curl ×10','Bicep curl ×10'])],
+['DIRTY 30s:\nLATERAL → HAMMER → BICEP',rows(3)],
 ['DOUBLE\nSNATCH',rows(3)],
 ['REVERSE FLY',rows(2)],
 ['REN. ROW',timed('30 seconds')],
@@ -57,14 +57,15 @@ const defs=[
 ['HOLLOWBODY',timed('20 seconds')]
 ]},
 {title:'DAY 2 — LEGS & CORE',groups:[
-['FRONT / SPLIT SQUAT → REVERSE LUNGE',rows(2,['Right • front','Right • reverse','Left • front','Left • reverse'])],
+['SPLIT SQUAT',rows(4)],
+['REVERSE\nLUNGE',rows(4)],
 ['DUMBBELL\nSQUAT',rows(3)],
 ['KICKSTAND DEADLIFT → SINGLE LEG DEADLIFT',rows(2,['Right • kickstand','Right • single leg','Left • kickstand','Left • single leg'])],
 ['ROMANIAN\nDEADLIFT',rows(3)],
 ['SINGLE / STRAIGHT\nLEG STRETCH',timed('1 minute')],
 ['OBLIQUE TUCK-UP\n(R/L)',timed('30 sec right / 30 sec left')],
 ['BUTTERFLY SIT-UP',timed('1 minute')],
-['EMOM (DB SWING / JUMP SQUAT)',rows(5,['Dumbbell swing','Jump squat'],['Jump squat'])]
+['EMOM (DB SWING / JUMP SQUAT)',[{label:'5 minutes • weight as needed',timed:true,noTracking:true}]]
 ]},
 {title:'DAY 3 — UPPER BODY PUSH',groups:[
 ['CHEST PRESS',rows(4)],
@@ -78,10 +79,10 @@ const defs=[
 function rows(sets,moves,bodyweight){const a=[];for(let s=1;s<=sets;s++)for(const move of (moves?.length?moves:['']))a.push({label:(moves?.length?move:'Set '+s),set:s,movement:move||'',bodyweight:(bodyweight||[]).includes(move)||bodyweight?.includes('*')});return a}
 function timed(label){return [{label,timed:true}]}
 let day=0,week=0,saved={},extras={},authOn=false,cloudReady=false,queue=null,cloudSave=null;
-try{let raw=JSON.parse(localStorage.getItem('rk-worksheet-v1')||'{}');saved=raw?.entries||{};extras=raw?.unmatched||{}}catch(e){}
+try{let raw=JSON.parse(localStorage.getItem('rk-worksheet-v1')||'{}');saved=raw?.entries||{};extras=raw?.unmatched||{};if(raw?.layoutVersion!==2){const newer=migrateLayout(saved,extras);saved=newer.entries;extras=newer.unmatched}}catch(e){}
 const el=id=>document.getElementById(id);
 const key=(d,w,g,i,f)=>[d,w,g,i,f].join(':');
-function localSave(){try{localStorage.setItem('rk-worksheet-v1',JSON.stringify({entries:saved,unmatched:extras}));}catch(e){el('cloud').textContent='Local save failed — export backup'}if(cloudReady)window.queueSheetSave?.()}
+function localSave(){try{localStorage.setItem('rk-worksheet-v1',JSON.stringify({entries:saved,unmatched:extras,layoutVersion:2}));}catch(e){el('cloud').textContent='Local save failed — export backup'}if(cloudReady)window.queueSheetSave?.()}
 function tabs(){[['dayTabs',['Pull','Legs & Core','Push'],day,n=>day=n],['weekTabs',['Week 1','Week 2','Week 3','Week 4'],week,n=>week=n]].forEach(([id,labels,selected,change])=>{el(id).replaceChildren();labels.forEach((l,i)=>{let b=document.createElement('button');b.textContent=l;b.className=i===selected?'active':'';b.onclick=()=>{change(i);render()};el(id).append(b)})})}
 function textInput(k,label,field){const input=document.createElement('input');input.setAttribute('aria-label',label);input.value=saved[k]??'';input.inputMode=field==='notes'?'text':'decimal';if(field==='notes')input.placeholder='Notes / modifications';input.oninput=()=>{saved[k]=input.value;localSave()};return input}
 function render(){
@@ -96,25 +97,24 @@ let td=document.createElement('td');td.className='sub';td.textContent=r.label;tr
 td=document.createElement('td');td.className=r.timed?'timing':'cell';
 if(r.timed||r.bodyweight){td.textContent='—'}else{let inp=textInput(key(day,week,g,i,'weight'),name+' '+r.label+' weight','weight');inp.addEventListener('change',()=>{if(!inp.value)return;const next=tbody.querySelector('[data-weight-key="'+key(day,week,g,i+1,'weight')+'"]');if(next&&!next.value){next.value=inp.value;saved[key(day,week,g,i+1,'weight')]=inp.value;localSave()}});inp.dataset.weightKey=key(day,week,g,i,'weight');td.append(inp)}tr.append(td);
 td=document.createElement('td');td.className='cell';if(r.timed){td.className='timing';td.textContent=r.label}else{td.append(textInput(key(day,week,g,i,'reps'),name+' '+r.label+' reps','reps'))}tr.append(td);
-td=document.createElement('td');td.className='notes';td.append(textInput(key(day,week,g,i,'notes'),name+' '+r.label+' notes','notes'));tr.append(td);tbody.append(tr)})}
+td=document.createElement('td');td.className='notes';if(r.noTracking){td.textContent='—'}else{td.append(textInput(key(day,week,g,i,'notes'),name+' '+r.label+' notes','notes'))}tr.append(td);tbody.append(tr)})}
 tbl.append(tbody);renderExtra()}
 function renderExtra(){const keys=Object.entries(extras);el('oldRecords').textContent=keys.length?keys.map(([k,v])=>k+': '+v).join('\n'):'No unmatched entries yet.'}
 function applyRecord(k,v){if(v==null||v==='')return false;let m=k.match(/^v2\|([012])\|(\d+)\|([^|]+)\|(\d+)\|([^|]*)\|([^|]*)\|(weight|reps|notes|seconds)$/);if(!m)return false;let [,dayRaw,weekRaw,id,setRaw,side,movement,field]=m;let d=+dayRaw,w=+weekRaw,s=+setRaw;if(w<0||w>3)return false;let g=-1,i=-1;
 const findGroup=x=>defs[d].groups.findIndex(([name])=>name.startsWith(x));
 const ix=(group,index)=>{g=group;i=index};
 if(d===0){let mapping={'three-point':0,'twisting-curl':1,'lat-pull':2,'row-combo':3,'snatch':6,'fly-circuit':7,'jackknife':10,'hollow':11};if(mapping[id]===undefined)return false;g=mapping[id];
-if(['three-point','twisting-curl'].includes(id))i=(s-1)*2+(side==='R'?1:0);
-else if(id==='row-combo')i=(s-1)*2+(movement==='Fly Row'?1:0);
+if(id==='three-point')i=(s-1)*2+(side==='R'?1:0);else if(id==='twisting-curl')i=s-1;
+else if(id==='row-combo')i=s-1;
 else if(id==='fly-circuit'){if(movement!=='Reverse Fly')return false;i=s-1}
 else i=s-1;
 }
-else if(d===1){if(id==='lunge-pair'){ix(0,(s-1)*4+(side==='R'?0:2)+(movement==='Reverse Lunge'?1:0))}
-else if(id==='split-squat'||id==='rev-lunge'){ix(0,Math.floor((s-1)/2)*4+((s-1)%2)*2+(id==='rev-lunge'?1:0))}
-else if(id==='db-squat')ix(1,s-1);
-else if(id==='deadlift-pair')ix(2,(s-1)*4+(side==='R'?0:2)+(movement.includes('Single')?1:0));
-else if(id==='deadlift-combo')ix(2,(Math.floor((s-1)/2))*4+((s-1)%2)*2+(movement.includes('Single')?1:0));
-else if(id==='rdl')ix(3,s-1);
-else if(id==='emom')ix(7,(s-1)*2+(movement==='Jump Squat'?1:0));
+else if(d===1){if(id==='lunge-pair'){ix(movement==='Reverse Lunge'?1:0,(s-1)*2+(side==='R'?0:1))}
+else if(id==='split-squat'||id==='rev-lunge'){ix(id==='split-squat'?0:1,s-1)}
+else if(id==='db-squat')ix(2,s-1);
+else if(id==='deadlift-pair')ix(3,(s-1)*4+(side==='R'?0:2)+(movement.includes('Single')?1:0));
+else if(id==='deadlift-combo')ix(3,(Math.floor((s-1)/2))*4+((s-1)%2)*2+(movement.includes('Single')?1:0));
+else if(id==='rdl')ix(4,s-1);
 else return false}
 else return false;
 if(g<0||i<0||i>=(defs[d].groups[g]?.[1]?.length||0))return false;
@@ -124,6 +124,32 @@ const dest=key(d,w,g,i,field);
 if(saved[dest]!==undefined&&saved[dest]!==''&&saved[dest]!==v)return false;
 if(saved[dest]===undefined||saved[dest]==='')saved[dest]=v;
 return true}
+
+function migrateLayout(entries,unmatched){
+ const output={},unknown={...(unmatched||{})};
+ const moved=(k,v,d,w,g,i,field)=>{
+  const dest=key(d,w,g,i,field);
+  if(output[dest]!==undefined&&output[dest]!==v){unknown['original:'+k]=v;return}
+  output[dest]=v;
+ };
+ for(const [k,v] of Object.entries(entries||{})){
+  const m=k.match(/^([012]):(\d+):(\d+):(\d+):(weight|reps|notes|date)$/);
+  if(!m){output[k]=v;continue}
+  const [__,d0,w0,g0,i0,field]=m;const d=+d0,w=+w0,g=+g0,i=+i0;
+  if(d===2){output[k]=v;continue}
+  if(d===0&&(g===1||g===3||g===5)){
+   if(g===1){const j=Math.floor(i/2);moved(k,v,d,w,g,j,field);if(i%2===1&&output[key(d,w,g,j,field)]!==v)unknown['original:'+k]=v}
+   else if(g===3){const j=Math.floor(i/2);moved(k,v,d,w,g,j,field)}
+   else{const j=Math.floor(i/3);moved(k,v,d,w,g,j,field)}
+   if(i% (g===5?3:2)!==0)unknown['original:'+k]=v;
+  }else if(d===1){
+   if(g===0){const j=Math.floor(i/4)*2+(i%4>=2?1:0);moved(k,v,d,w,i%4===1||i%4===3?1:0,j,field)}
+   else moved(k,v,d,w,g+1,i,field)
+  }else output[k]=v;
+ }
+ return {entries:output,unmatched:unknown};
+}
+
 function importObject(obj){const source=(obj&&typeof obj==='object'&&!Array.isArray(obj))?(obj.entries&&typeof obj.entries==='object'?obj.entries:obj):null;if(!source)throw Error('Invalid JSON');
 let mapped=0,unmatched=0;for(const [k,v] of Object.entries(source)){if(v==null||v==='')continue;
 if(k.match(/^[012]:\d+:/)){if(saved[k]===undefined||saved[k]==='')saved[k]=v;mapped++}
@@ -147,11 +173,11 @@ try{
 const app=initializeApp(config);const auth=getAuth(app),store=getFirestore(app);
 el('signIn').onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>message('Sign-in failed: '+e.message));
 el('signOut').onclick=async()=>{await chain.catch(()=>{});await signOut(auth)};
-window.queueSheetSave=()=>{if(!cloudReady||!userRef)return;clearTimeout(queue);message('Saving…');queue=setTimeout(()=>{const ref=userRef,content=structuredClone({entries:saved,unmatched:extras});chain=chain.catch(()=>{}).then(()=>setDoc(ref,{...content,updatedAt:serverTimestamp()})).then(()=>{if(userRef===ref)message('Saved to cloud ✓')}).catch(e=>message('Cloud save failed: '+e.message));},600)};
+window.queueSheetSave=()=>{if(!cloudReady||!userRef)return;clearTimeout(queue);message('Saving…');queue=setTimeout(()=>{const ref=userRef,content=structuredClone({entries:saved,unmatched:extras,layoutVersion:2});chain=chain.catch(()=>{}).then(()=>setDoc(ref,{...content,updatedAt:serverTimestamp()})).then(()=>{if(userRef===ref)message('Saved to cloud ✓')}).catch(e=>message('Cloud save failed: '+e.message));},600)};
 onAuthStateChanged(auth,async user=>{cloudReady=false;userRef=null;clearTimeout(queue);el('signIn').hidden=!!user;el('signOut').hidden=!user;if(!user){message('Not signed in — saving only on this device');return}message('Loading private workout worksheet…');try{
 const ref=doc(store,'users',user.uid,'workouts','worksheet-v1');
 const snap=await getDoc(ref);if(auth.currentUser?.uid!==user.uid)return;
-const remote=snap.exists()?snap.data():{};saved={...saved,...(remote.entries||{})};extras={...extras,...(remote.unmatched||{})};render();localSave();
+const remote=snap.exists()?snap.data():{};const normalized=remote.layoutVersion===2?{entries:remote.entries||{},unmatched:remote.unmatched||{}}:migrateLayout(remote.entries||{},remote.unmatched||{});saved={...saved,...normalized.entries};extras={...extras,...normalized.unmatched};render();localSave();
 userRef=ref;cloudReady=true;window.queueSheetSave();
 message('Signed in — syncing worksheet…')
 }catch(e){message('Cloud connection failed: '+e.message+'. Entries remain on this device')}})
