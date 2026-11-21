@@ -79,7 +79,7 @@ const defs=[
 function rows(sets,moves,bodyweight){const a=[];for(let s=1;s<=sets;s++)for(const move of (moves?.length?moves:['']))a.push({label:(moves?.length?move:'Set '+s),set:s,movement:move||'',bodyweight:(bodyweight||[]).includes(move)||bodyweight?.includes('*')});return a}
 function timed(label){return [{label,timed:true}]}
 let day=0,week=0,saved={},extras={},authOn=false,cloudReady=false,queue=null,cloudSave=null;
-try{let raw=JSON.parse(localStorage.getItem('rk-worksheet-v1')||'{}');saved=raw?.entries||{};extras=raw?.unmatched||{};if(raw?.layoutVersion!==2){const newer=migrateLayout(saved,extras);saved=newer.entries;extras=newer.unmatched}}catch(e){}
+let localLayoutVersion=2;try{let raw=JSON.parse(localStorage.getItem('rk-worksheet-v1')||'{}');saved=raw?.entries||{};extras=raw?.unmatched||{};localLayoutVersion=raw?.layoutVersion||1}catch(e){}
 const el=id=>document.getElementById(id);
 const key=(d,w,g,i,f)=>[d,w,g,i,f].join(':');
 function localSave(){try{localStorage.setItem('rk-worksheet-v1',JSON.stringify({entries:saved,unmatched:extras,layoutVersion:2}));}catch(e){el('cloud').textContent='Local save failed — export backup'}if(cloudReady)window.queueSheetSave?.()}
@@ -150,6 +150,7 @@ function migrateLayout(entries,unmatched){
  return {entries:output,unmatched:unknown};
 }
 
+if(localLayoutVersion!==2){const original=migrateLayout(saved,extras);saved=original.entries;extras=original.unmatched;localStorage.setItem('rk-worksheet-v1',JSON.stringify({entries:saved,unmatched:extras,layoutVersion:2}));}
 function importObject(obj){const source=(obj&&typeof obj==='object'&&!Array.isArray(obj))?(obj.entries&&typeof obj.entries==='object'?obj.entries:obj):null;if(!source)throw Error('Invalid JSON');
 let mapped=0,unmatched=0;for(const [k,v] of Object.entries(source)){if(v==null||v==='')continue;
 if(k.match(/^[012]:\d+:/)){if(saved[k]===undefined||saved[k]==='')saved[k]=v;mapped++}
